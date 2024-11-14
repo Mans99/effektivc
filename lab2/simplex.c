@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 struct simplex_t {
     int m;
@@ -156,8 +157,11 @@ int main(int argc, char** argv) {
 
     // Initialize the simplex structure
     int min_index = init(&simplex, m, n, var, a, b, x, c, y);
+    int nonbasic = select_nonbasic(&simplex);
+
     printf("Index of minimum b[i]: %d\n", min_index);
     printf("Minimum b value: %lf\n", b[min_index]);
+    printf("Nonbasic value: %lf", c[nonbasic]);
 
     // Free allocated memory
     free(c);
