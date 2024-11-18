@@ -91,8 +91,7 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
     int i,j,k;
     double w;
     k = init(s, m, n, A, b, c, x, y, var);
-
-    if (1 == 1){
+    if (b[k] >= 0){
         return 1;
     }
     prepare(s,k);
@@ -128,7 +127,8 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
                 s->A[k][n-1] = s->A[k][i];
                 s->A[k][i] = w;
             }
-        }
+        } else {
+            
         free(s->c);
         s->c = c;
         s->y = y;
@@ -141,7 +141,7 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
             for (j = 0; j < n; j++){
                 if (k == s->var[j]){
                     t[j] = t[j] + s->c[k];
-                    break;
+                    goto next_k;
                 }
             }
             for (j=0; j<m;j++){
@@ -153,14 +153,15 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
             for (i=0;i<n;i++){
                 t[i]=t[i] - s->c[k]*s->A[j][i];
             }
+            next_k:;
         }
         for (i = 0; i<n;i++){
             s->c[i]=t[i];
-            free(t);
-            free(s->x);
-            return 1;
         }
-    }
+        free(t);
+        //free(s->x);
+        return 1;
+    }}
     return 0;
 }
 
@@ -237,7 +238,7 @@ double xsimplex(int m, int n, double** A, double* b, double* c, double* x, doubl
 
         if (row < 0) {
             free(s.var);
-            return 1; 
+            return INFINITY; 
         }
 
         pivot(&s, row, col);
@@ -286,7 +287,7 @@ int main(int argc, char** argv) {
     struct simplex_t s;
     int* var = NULL;  // Initialize as NULL to be allocated in `init()`
     double y = 0;
-    double* x = NULL;  // This can remain NULL if not used in the current logic
+    double* x;  // This can remain NULL if not used in the current logic
 
     // Read m and n
     scanf("%d %d", &m, &n);
