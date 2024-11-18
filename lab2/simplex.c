@@ -2,6 +2,14 @@
 #include <stdlib.h>
 #include <math.h>
 
+int init(struct simplex_t* s, int m, int n, int* var, double** A, double* b, double* x, double* c, double y);
+int select_nonbasic(struct simplex_t* s);
+void prepare(struct simplex_t* s,int k);
+int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* x, double* c, double y,int* var);
+void pivot (struct simplex_t* s, int row, int col);
+double xsimplex(int m, int n, double** A, double* b, double* c, double* x, double y, int* var, int h);
+int simplex(int m, int n, double ** A, double* b, double* c, double* x, double y, int* var, int h);
+
 struct simplex_t {
     int m;
     int n;
@@ -157,9 +165,9 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* x, d
 
 
 void pivot (struct simplex_t* s, int row, int col) {
-    auto a = s->A;
-    auto b = s->b;
-    auto c = s->c;
+    auto** a = s->A;
+    auto* b = s->b;
+    auto* c = s->c;
     int m = s->m;
     int n = s->n;
     int i,j,t;
