@@ -2,14 +2,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-int init(struct simplex_t* s, int m, int n, int* var, double** A, double* b, double* x, double* c, double y);
-int select_nonbasic(struct simplex_t* s);
-void prepare(struct simplex_t* s,int k);
-int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* x, double* c, double y,int* var);
-void pivot (struct simplex_t* s, int row, int col);
-double xsimplex(int m, int n, double** A, double* b, double* c, double* x, double y, int* var, int h);
-int simplex(int m, int n, double ** A, double* b, double* c, double* x, double y, int* var, int h);
-
 struct simplex_t {
     int m;
     int n;
@@ -21,7 +13,17 @@ struct simplex_t {
     double y;
 };
 
-int init(struct simplex_t* s, int m, int n, int* var, double** A, double* b, double* x, double* c, double y) {
+int init(struct simplex_t* s, int m, int n, double** A, double* b, double* c, double* x, double y , int* var);
+int select_nonbasic(struct simplex_t* s);
+void prepare(struct simplex_t* s,int k);
+int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, double* x, double y,int* var);
+void pivot (struct simplex_t* s, int row, int col);
+double xsimplex(int m, int n, double** A, double* b, double* c, double* x, double y, int* var, int h);
+int simplex(int m, int n, double ** A, double* b, double* c, double* x, double y);
+
+
+
+int init(struct simplex_t* s, int m, int n, double** A, double* b, double* c, double* x, double y , int* var) {
     int i, k;
     s->m = m;
     s->n = n;
@@ -30,6 +32,7 @@ int init(struct simplex_t* s, int m, int n, int* var, double** A, double* b, dou
     s->c = c;
     s->x = x;
     s->y = y;
+    s->var = var;
 
     // Allocate `var` if it is NULL
     if (s->var == NULL) {
@@ -84,22 +87,22 @@ void prepare(struct simplex_t* s,int k){
 
 
 
-int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* x, double* c, double y,int* var){
+int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, double* x, double y, int* var){
     int i,j,k;
     double w;
-    k = init(&s, m, n, var, A, b, x, c, y);
+    k = init(s, m, n, A, b, c, x, y, var);
 
-    if (b[k] >= 0){
+    if (1 == 1){
         return 1;
     }
-    prepare(&s,k);
+    prepare(s,k);
 
     n = s->n;
     s->y = xsimplex(m,n,s->A,s->b,s->c,s->x,0,s->var,1);
 
-    for (i = 0; i < m+n+1; i++){
-        if (s->var[i] == m+n+1){
-            if (abs(s->x[i]) > pow(10,-6)){
+    for (i = 0; i < m+n; i++){
+        if (s->var[i] == m+n-1){
+            if (fabs(s->x[i]) > pow(10,-6)){
                 free(s->x);
                 free(s->c);
                 return 0;
@@ -109,7 +112,7 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* x, d
         }
         if (i >= n){
             for (j = k = 0; k < n; k++){
-                if (abs(s->A[i-n][k])>abs(s->A[i-n][j])){
+                if (fabs(s->A[i-n][k])>fabs(s->A[i-n][j])){
                     j = k;
                 }
             }
@@ -158,16 +161,15 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* x, d
             return 1;
         }
     }
-
-
+    return 0;
 }
 
 
 
 void pivot (struct simplex_t* s, int row, int col) {
-    auto** a = s->A;
-    auto* b = s->b;
-    auto* c = s->c;
+    double** a = s->A;
+    double* b = s->b;
+    double* c = s->c;
     int m = s->m;
     int n = s->n;
     int i,j,t;
@@ -215,6 +217,7 @@ void pivot (struct simplex_t* s, int row, int col) {
 double xsimplex(int m, int n, double** A, double* b, double* c, double* x, double y, int* var, int h) {
     struct simplex_t s;
     int i, row, col;
+
 
     if (!initial(&s, m, n, A, b, c, x, y, var)) {
         free(s.var);
@@ -267,8 +270,8 @@ double xsimplex(int m, int n, double** A, double* b, double* c, double* x, doubl
 }
 
 
-int simplex(int m, int n, double ** A, double* b, double* c, double* x, double y, int* var, int h) {
-    xsimplex(m,n,A,b,c,x,y, NULL,0);
+int simplex(int m, int n, double ** A, double* b, double* c, double* x, double y) {
+    return xsimplex(m,n,A,b,c,x,y, NULL,0);
 }
 
 
@@ -280,7 +283,7 @@ int main(int argc, char** argv) {
     double** a;
     double* b;
     int i, j;
-    struct simplex_t simplex;
+    struct simplex_t s;
     int* var = NULL;  // Initialize as NULL to be allocated in `init()`
     double y = 0;
     double* x = NULL;  // This can remain NULL if not used in the current logic
@@ -291,6 +294,10 @@ int main(int argc, char** argv) {
 
     // Allocate memory for c, a, and b
     c = calloc(n, sizeof(double));
+    for (i = 0; i < n; i++) {
+        printf("%lf", c[i]);
+    }
+    
     a = calloc(m, sizeof(double*));
     for (i = 0; i < m; i++) {
         a[i] = calloc(n, sizeof(double));
@@ -315,12 +322,9 @@ int main(int argc, char** argv) {
     }
 
     // Initialize the simplex structure
-    int min_index = init(&simplex, m, n, var, a, b, x, c, y);
-    int nonbasic = select_nonbasic(&simplex);
+    int min_index = simplex(m, n, a, b, c, x, y);
 
     printf("Index of minimum b[i]: %d\n", min_index);
-    printf("Minimum b value: %lf\n", b[min_index]);
-    printf("Nonbasic value: %lf", c[nonbasic]);
 
     // Free allocated memory
     free(c);
@@ -329,7 +333,7 @@ int main(int argc, char** argv) {
     }
     free(a);
     free(b);
-    free(simplex.var);
+    free(s.var);
 
     return 0;
 }
