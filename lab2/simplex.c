@@ -75,8 +75,8 @@ void prepare(struct simplex_t* s,int k){
 }
 
 
-/*
-int initial(struct simplex_t* s,int m,int n,int* var, double** A, double* b, double* x, double* c, double y){
+
+int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* x, double* c, double y,int* var){
     int i,j,k;
     double w;
     k = init(&s, m, n, var, A, b, x, c, y);
@@ -108,13 +108,53 @@ int initial(struct simplex_t* s,int m,int n,int* var, double** A, double* b, dou
             pivot(s,i-n,j);
             i=j;
         }
-
+        if (i < n-1){
+            k = s->var[i]; 
+            s->var[i] = s->var[n-1];
+            s->var[n-1]=k;
+            for (int k = 0; k < m; k++){
+                w = s->A[k][n-1];
+                s->A[k][n-1] = s->A[k][i];
+                s->A[k][i] = w;
+            }
+        }
+        free(s->c);
+        s->c = c;
+        s->y = y;
+        for (k = n-1; k < n+m-1; k++){
+            s->var[k] = s->var[k+1];
+        }
+        n = s->n = s->n-1;
+        double* t = calloc(n, sizeof(double));
+        for (k = 0; k < n; k++){
+            for (j = 0; j < n; j++){
+                if (k == s->var[j]){
+                    t[j] = t[j] + s->c[k];
+                    break;
+                }
+            }
+            for (j=0; j<m;j++){
+                if (s->var[n+j] == k){
+                    break;
+                }
+            }
+            s->y = s->y + s->c[k]*s->b[j];
+            for (i=0;i<n;i++){
+                t[i]=t[i] - s->c[k]*s->A[j][i];
+            }
+        }
+        for (i = 0; i<n;i++){
+            s->c[i]=t[i];
+            free(t);
+            free(s->x);
+            return 1;
+        }
     }
 
 
 }
 
-*/
+
 
 void pivot (struct simplex_t* s, int row, int col) {
     auto a = s->A;
