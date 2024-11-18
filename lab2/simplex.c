@@ -52,7 +52,7 @@ int select_nonbasic(struct simplex_t* s){
     return -1;
 }
 
-/*
+
 
 void prepare(struct simplex_t* s,int k){
     int m = s->m;
@@ -74,6 +74,8 @@ void prepare(struct simplex_t* s,int k){
     pivot(s,k,n-1);
 }
 
+
+/*
 int initial(struct simplex_t* s,int m,int n,int* var, double** A, double* b, double* x, double* c, double y){
     int i,j,k;
     double w;
@@ -113,6 +115,115 @@ int initial(struct simplex_t* s,int m,int n,int* var, double** A, double* b, dou
 }
 
 */
+
+void pivot (struct simplex_t* s, int row, int col) {
+    auto a = s->A;
+    auto b = s->b;
+    auto c = s->c;
+    int m = s->m;
+    int n = s->n;
+    int i,j,t;
+
+    t = s->var[col];
+    s->var[col] = s->var[n + row];
+    s->var[n+row] = t;
+    s->y = s->y + c[col] * b[row]/a[row][col];
+    for (i = 0; i < n ; i = i + 1) {
+        if (i != col) {
+            c[i] = c[i] - c[col] * a[row][i] / a[row][col];
+        }
+    }
+    c[col] = -c[col] / a[row][col];
+    for (i = 0; i < m; i = i+1) {
+        if (i != row) {
+            b[i] = b[i] - a[i][col] * b[row]/ a[row][col];
+        }
+    }
+    for (i = 0; i < m; i = i+1) {
+        if(i != row) {
+            for (j = 0; j < n; j++) {
+                if (j != col) {
+                    a[i][j] = a[i][j] - a[i][col] * a[row][j] / a[row][col];
+                }
+            }
+        }
+    }
+    for (i = 0; i < m; i++) {
+        if (i != row) {
+            a[i][col] = -a[i][col] / a[row][col];
+        }
+    }
+    for (i = 0; i < n; i++) {
+        if (i != col) {
+            a[row][i] = a[row][i] / a[row][col];
+        }
+    }
+    b[row] = b[row] / a[row][col];
+    a[row][col] = 1 / a[row][col];
+}
+
+
+
+double xsimplex(int m, int n, double** A, double* b, double* c, double* x, double y, int* var, int h) {
+    struct simplex_t s;
+    int i, row, col;
+
+    if (!initial(&s, m, n, A, b, c, x, y, var)) {
+        free(s.var);
+        return NAN; 
+    }
+
+    while ((col = select_nonbasic(&s)) >= 0) {
+        row = -1;
+
+        for (i = 0; i < m; i++) {
+            if (s.A[i][col] > pow(10,-6)) {
+                if (row < 0 || (s.b[i] / s.A[i][col] < s.b[row] / s.A[row][col])) {
+                    row = i;
+                }
+            }
+        }
+
+        if (row < 0) {
+            free(s.var);
+            return 1; 
+        }
+
+        pivot(&s, row, col);
+    }
+
+
+    if (h == 0) {
+        for (i = 0; i < n; i++) {
+            if (s.var[i] < n) {
+                x[s.var[i]] = 0;
+            }
+        }
+        for (i = 0; i < m; i++) {
+            if (s.var[n + i] < n) {
+                x[s.var[n + i]] = s.b[i];
+            }
+        }
+    } else {
+        for (i = 0; i < n; i++) {
+            x[i] = 0;
+        }
+        for (i = n; i < n + m; i++) {
+            x[i] = s.b[i - n];
+        }
+    }
+
+    double result = s.y;
+    free(s.var);
+    return result;
+}
+
+
+int simplex(int m, int n, double ** A, double* b, double* c, double* x, double y, int* var, int h) {
+    xsimplex(m,n,A,b,c,x,y, NULL,0);
+}
+
+
 
 
 int main(int argc, char** argv) {
