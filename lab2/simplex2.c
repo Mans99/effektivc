@@ -19,7 +19,7 @@ void prepare(struct simplex_t* s,int k);
 int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, double* x, double y,int* var);
 void pivot (struct simplex_t* s, int row, int col);
 double xsimplex(int m, int n, double** A, double* b, double* c, double* x, double y, int* var, int h);
-int simplex(int m, int n, double ** A, double* b, double* c, double* x, double y);
+double simplex(int m, int n, double ** A, double* b, double* c, double* x, double y);
 
 
 
@@ -32,7 +32,7 @@ int init(struct simplex_t* s, int m, int n, double** A, double* b, double* c, do
     s->c = c;
     s->x = x;
     s->y = y;
-    s->var = NULL;
+    s->var = var;
 
     // Allocate `var` if it is NULL
     if (s->var == NULL) {
@@ -40,7 +40,6 @@ int init(struct simplex_t* s, int m, int n, double** A, double* b, double* c, do
         for (i = 0; i < m + n; i++) {
             s->var[i] = i;
         }
-    }
 
     // Find index `k` of the smallest `b[i]`
     k = 0;
@@ -50,6 +49,9 @@ int init(struct simplex_t* s, int m, int n, double** A, double* b, double* c, do
         }
     }
     return k;
+    } else {
+    return 0;
+    }
 }
 
 
@@ -92,7 +94,7 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
     double w;
     k = init(s, m, n, A, b, c, x, y, var);
 
-     if (b[k] >= 0){
+    if (b[k] >= 0){
         return 1;
     }
     prepare(s,k);
@@ -248,30 +250,32 @@ double xsimplex(int m, int n, double** A, double* b, double* c, double* x, doubl
     if (h == 0) {
         for (i = 0; i < n; i++) {
             if (s.var[i] < n) {
-                x[s->var[i]] = 0;
+                x[s.var[i]] = 0;
             }
         }
+
         for (i = 0; i < m; i++) {
-            if (s->var[n + i] < n) {
-                x[s->var[n + i]] = s->b[i];
+            if (s.var[n + i] < n) {
+                x[s.var[n + i]] = s.b[i];
             }
         }
+        free(s.var);
     } else {
         for (i = 0; i < n; i++) {
             x[i] = 0;
         }
         for (i = n; i < n + m; i++) {
-            x[i] = s->b[i - n];
+            x[i] = b[i - n];
         }
     }
 
     double result = s.y;
-    free(s.var);
+    
     return result;
 }
 
 
-int simplex(int m, int n, double ** A, double* b, double* c, double* x, double y) {
+double simplex(int m, int n, double ** A, double* b, double* c, double* x, double y) {
     return xsimplex(m,n,A,b,c,x,y, NULL,0);
 }
 
@@ -285,11 +289,13 @@ int main(int argc, char** argv) {
     double* b;
     int i, j;
     int* var; 
-    double y = 0;
-    double* x = calloc((n+1),sizeof(double)); 
 
     scanf("%d %d", &m, &n);
     printf("m = %d, n = %d\n", m, n);
+    double y = 0;
+    double* x = calloc((n+m), sizeof(double)); 
+
+   
 
     c = calloc(n, sizeof(double));
     for (i = 0; i < n; i++) {
