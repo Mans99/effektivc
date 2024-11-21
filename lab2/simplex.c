@@ -22,7 +22,7 @@ double xsimplex(int m, int n, double** A, double* b, double* c, double* x, doubl
 int simplex(int m, int n, double ** A, double* b, double* c, double* x, double y);
 
 
-
+int glob;
 int init(struct simplex_t* s, int m, int n, double** A, double* b, double* c, double* x, double y , int* var) {
     int i, k;
     s->m = m;
@@ -216,6 +216,7 @@ void pivot (struct simplex_t* s, int row, int col) {
 
 
 double xsimplex(int m, int n, double** A, double* b, double* c, double* x, double y, int* var, int h) {
+    glob += 1;
     struct simplex_t s;
     int i, row, col;
 
@@ -285,9 +286,9 @@ int main(int argc, char** argv) {
     double* b;
     int i, j;
     struct simplex_t s;
-    int* var = NULL;  // Initialize as NULL to be allocated in `init()`
+    int* var;
     double y = 0;
-    double* x;  // This can remain NULL if not used in the current logic
+    double* x;
 
     // Read m and n
     scanf("%d %d", &m, &n);
