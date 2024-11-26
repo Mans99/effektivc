@@ -21,7 +21,7 @@ void pivot (struct simplex_t* s, int row, int col);
 double xsimplex(int m, int n, double** A, double* b, double* c, double* x, double y, int* var, int h);
 double simplex(int m, int n, double ** A, double* b, double* c, double* x, double y);
 
-
+int glob = 0;
 
 int init(struct simplex_t* s, int m, int n, double** A, double* b, double* c, double* x, double y , int* var) {
     int i, k;
@@ -68,6 +68,7 @@ int select_nonbasic(struct simplex_t* s){
 
 
 void prepare(struct simplex_t* s,int k){
+    glob++;
     int m = s->m;
     int n = s->n;
     int i;
@@ -78,7 +79,7 @@ void prepare(struct simplex_t* s,int k){
     s->var[n] = m+n;
     n = n + 1;
     for (int i=0; i < m; i++){
-        s->A[i][n-1] = s->A[i][n-1] - 1;
+        s->A[i][n-1] = -1;
     }
     s->x = calloc(m+n, sizeof(double));
     s->c = calloc(n, sizeof(double));
@@ -113,6 +114,7 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
                 break;
             }
         }
+    }
         if (i >= n){
             for (j = k = 0; k < n; k++){
                 if (fabs(s->A[i-n][k])>fabs(s->A[i-n][j])){
@@ -131,6 +133,8 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
                 s->A[k][n-1] = s->A[k][i];
                 s->A[k][i] = w;
             }
+        } else {
+
         }
         free(s->c);
         s->c = c;
@@ -144,7 +148,7 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
             for (j = 0; j < n; j++){
                 if (k == s->var[j]){
                     t[j] = t[j] + s->c[k];
-                    break;
+                    goto next_k;
                 }
             }
             for (j=0; j<m;j++){
@@ -156,6 +160,7 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
             for (i=0;i<n;i++){
                 t[i]=t[i] - s->c[k]*s->A[j][i];
             }
+            next_k:;
         }
         for (i = 0; i<n;i++){
             s->c[i]=t[i];
@@ -163,8 +168,6 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
         free(t);
         free(s->x);
         return 1;
-    }
-    return 0;
 }
 
 
