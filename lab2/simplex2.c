@@ -280,6 +280,33 @@ double simplex(int m, int n, double ** A, double* b, double* c, double* x, doubl
 }
 
 
+void print_matrix(int m, int n, double* c, double** a, double* b) {
+	int i;
+	int j;
+
+	printf("max Z = ");
+    for(i = 0; i < n; i +=1){
+        if(i > 0){
+            printf("%+10.3lf ",c[i]);
+        } else {
+            printf("%10.3lf", c[i]);
+        }
+    }
+    printf("\n");
+
+    for (i = 0; i < m; i += 1) {
+        printf("\t");
+        for (j = 0; j < n; j += 1) {
+            if (j > 0) {
+                printf("%+10.3lf", a[i][j]);
+            } else {
+                printf("%10.3lf", a[i][j]);
+            }
+        }
+        printf(" \u2264 %8.3lf\n", b[i]);
+    }
+}
+
 
 
 int main(int argc, char** argv) {
@@ -298,9 +325,6 @@ int main(int argc, char** argv) {
    
 
     c = calloc(n, sizeof(double));
-    for (i = 0; i < n; i++) {
-        printf("%lf", c[i]);
-    }
     
     a = calloc(m, sizeof(double*));
     for (i = 0; i < m; i++) {
@@ -321,6 +345,9 @@ int main(int argc, char** argv) {
     for (i = 0; i < m; i++) {
         scanf("%lf", &b[i]);
     }
+
+    print_matrix(m, n, c, a, b);
+
 
     int min_index = simplex(m, n, a, b, c, x, y);
 
