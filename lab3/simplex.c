@@ -23,6 +23,7 @@ double simplex(int m, int n, double ** A, double* b, double* c, double* x, doubl
 
 int glob = 0;
 
+
 int init(struct simplex_t* s, int m, int n, double** A, double* b, double* c, double* x, double y , int* var) {
     int i, k;
     s->m = m;
@@ -34,12 +35,16 @@ int init(struct simplex_t* s, int m, int n, double** A, double* b, double* c, do
     s->y = y;
     s->var = var;
 
+    
+    
+
     // Allocate `var` if it is NULL
     if (s->var == NULL) {
-        s->var = calloc(m + n + 1, sizeof(int));
+        s->var = malloc((m + n + 1) * sizeof(int));
         for (i = 0; i < m + n; i++) {
             s->var[i] = i;
         }
+        
 
     // Find index `k` of the smallest `b[i]`
     k = 0;
@@ -72,6 +77,10 @@ void prepare(struct simplex_t* s,int k){
     int m = s->m;
     int n = s->n;
     int i;
+    int local_array[10];
+    for (i = 0; i < 11; i += 1) {
+        local_array[i] = i;
+    }
 
     for (int i = m + n; i > n; i--){
         s->var[i] = s->var[i-1];

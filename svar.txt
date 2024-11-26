@@ -1,3 +1,49 @@
 2. we extend the a matrix with one more row and add one value to the b vertex. then we also increment the m value to indicate that we've added another constraint.
 no, the optimal solution is still within the constrained area.
 
+6. Conditional jump or move depends on uninitialised value(s)
+==7424==    at 0x10995E: initial (simplex.c:151)
+==7424==    by 0x10A20A: xsimplex (simplex.c:230)
+==7424==    by 0x10A55F: simplex (simplex.c:284)
+==7424==    by 0x10A951: main (simplex.c:357)
+
+med --track-origins=yes läggs detta till
+==7438==  Uninitialised value was created by a heap allocation
+==7438==    at 0x4848899: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==7438==    by 0x1092B6: init (simplex.c:39)
+...
+
+7.yes 
+Conditional jump or move depends on uninitialised value(s)
+==7554==    at 0x1092EC: init (simplex.c:40)
+==7554==    by 0x109568: initial (simplex.c:97)
+==7554==    by 0x10A236: xsimplex (simplex.c:230)
+==7554==    by 0x10A58B: simplex (simplex.c:284)
+==7554==    by 0x10A97D: main (simplex.c:357)
+==7554==  Uninitialised value was created by a stack allocation
+==7554==    at 0x109209: init (simplex.c:26)
+
+8.*** stack smashing detected ***: terminated
+==7727== 
+==7727== Process terminating with default action of signal 6 (SIGABRT)
+==7727==    at 0x49199FC: __pthread_kill_implementation (pthread_kill.c:44)
+==7727==    by 0x49199FC: __pthread_kill_internal (pthread_kill.c:78)
+==7727==    by 0x49199FC: pthread_kill@@GLIBC_2.34 (pthread_kill.c:89)
+==7727==    by 0x48C5475: raise (raise.c:26)
+==7727==    by 0x48AB7F2: abort (abort.c:79)
+==7727==    by 0x490C675: __libc_message (libc_fatal.c:155)
+==7727==    by 0x49B9599: __fortify_fail (fortify_fail.c:26)
+==7727==    by 0x49B9565: __stack_chk_fail (stack_chk_fail.c:24)
+==7727==    by 0x1093A8: init (simplex.c:62)
+==7727==    by 0x1095C1: initial (simplex.c:103)
+==7727==    by 0x10A28F: xsimplex (simplex.c:236)
+==7727==    by 0x10A5E4: simplex (simplex.c:290)
+==7727==    by 0x10A9D6: main (simplex.c:363)
+
+
+no, it detects what the problem is but not which row it occurs, only the function it occurs in.
+
+9. nada. may access valid memory allocated to the global var
+
+10. it identifies that an error has occured with the global variable.
+    for local lists it detects that something is wrong but gives less info about where, the same error as for globals.
