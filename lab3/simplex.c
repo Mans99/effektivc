@@ -142,7 +142,8 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
         for (k = n-1; k < n+m-1; k++){
             s->var[k] = s->var[k+1];
         }
-        n = s->n = s->n-1;
+        n = s->n - 1;
+        s->n = s->n - 1;
         double* t = calloc(n, sizeof(double));
         for (k = 0; k < n; k++){
             for (j = 0; j < n; j++){
@@ -352,9 +353,9 @@ int main(int argc, char** argv) {
     print_matrix(m, n, c, a, b);
 
 
-    int min_index = simplex(m, n, a, b, c, x, y);
+    double min_index = simplex(m, n, a, b, c, x, y);
 
-    printf("Index of minimum b[i]: %d\n", min_index);
+    printf("Index of minimum b[i]: %lf\n", min_index);
 
     free(c);
     for (i = 0; i < m; i++) {
