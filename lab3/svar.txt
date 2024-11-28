@@ -45,5 +45,11 @@ no, it detects what the problem is but not which row it occurs, only the functio
 
 9. nada. may access valid memory allocated to the global var
 
-10. it identifies that an error has occured with the global variable.
-    for local lists it detects that something is wrong but gives less info about where, the same error as for globals.
+10. for local This frame has 1 object(s):
+    [48, 88) 'local_array' (line 80) <== Memory access at offset 88 overflows this variable
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism, swapcontext or vfork
+
+Global
+0x000100020348 is located 0 bytes to the right of global variable 'local_array' defined in 'simplex.c:16:7' (0x100020320) of size 40
+0x000100020348 is located 56 bytes to the left of global variable 'glob' defined in 'simplex.c:26:5' (0x100020380) of size 4
+SUMMARY: AddressSanitizer: global-buffer-overflow /home/ma2872en-s/lab3/simplex.c:84 in prepare

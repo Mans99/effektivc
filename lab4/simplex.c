@@ -13,17 +13,14 @@ struct simplex_t {
     double y;
 };
 
-  int local_array[10];
-
 int init(struct simplex_t* s, int m, int n, double** A, double* b, double* c, double* x, double y , int* var);
 int select_nonbasic(struct simplex_t* s);
 void prepare(struct simplex_t* s,int k);
 int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, double* x, double y,int* var);
 void pivot (struct simplex_t* s, int row, int col);
 double xsimplex(int m, int n, double** A, double* b, double* c, double* x, double y, int* var, int h);
-double simplex(int m, int n, double ** A, double* b, double* c, double* x, double y);
+int simplex(int m, int n, double ** A, double* b, double* c, double* x, double y);
 
-int glob = 0;
 
 
 int init(struct simplex_t* s, int m, int n, double** A, double* b, double* c, double* x, double y , int* var) {
@@ -37,28 +34,22 @@ int init(struct simplex_t* s, int m, int n, double** A, double* b, double* c, do
     s->y = y;
     s->var = var;
 
-    
-    
-
     // Allocate `var` if it is NULL
     if (s->var == NULL) {
-        s->var = malloc((m + n + 1) * sizeof(int));
+        s->var = calloc(m + n, sizeof(int));
         for (i = 0; i < m + n; i++) {
             s->var[i] = i;
         }
-        
+    }
 
     // Find index `k` of the smallest `b[i]`
     k = 0;
     for (i = 1; i < m; i++) {
-        if (b[i] < b[k]) {
+        if (s->b[i] < s->b[k]) {
             k = i;
         }
     }
     return k;
-    } else {
-    return 0;
-    }
 }
 
 
@@ -75,14 +66,9 @@ int select_nonbasic(struct simplex_t* s){
 
 
 void prepare(struct simplex_t* s,int k){
-    glob++;
     int m = s->m;
     int n = s->n;
     int i;
-  
-    for (i = 0; i < 11; i += 1) {
-        local_array[i] = i;
-    }
 
     for (int i = m + n; i > n; i--){
         s->var[i] = s->var[i-1];
@@ -90,7 +76,7 @@ void prepare(struct simplex_t* s,int k){
     s->var[n] = m+n;
     n = n + 1;
     for (int i=0; i < m; i++){
-        s->A[i][n-1] = -1;
+        s->A[i][n-1] = s->A[i][n-1] - 1;
     }
     s->x = calloc(m+n, sizeof(double));
     s->c = calloc(n, sizeof(double));
@@ -106,7 +92,7 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
     double w;
     k = init(s, m, n, A, b, c, x, y, var);
 
-    if (b[k] >= 0){
+     if (b[k] >= 0){
         return 1;
     }
     prepare(s,k);
@@ -125,7 +111,6 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
                 break;
             }
         }
-    }
         if (i >= n){
             for (j = k = 0; k < n; k++){
                 if (fabs(s->A[i-n][k])>fabs(s->A[i-n][j])){
@@ -144,8 +129,6 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
                 s->A[k][n-1] = s->A[k][i];
                 s->A[k][i] = w;
             }
-        } else {
-
         }
         free(s->c);
         s->c = c;
@@ -153,14 +136,13 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
         for (k = n-1; k < n+m-1; k++){
             s->var[k] = s->var[k+1];
         }
-        n = s->n - 1;
-        s->n = s->n - 1;
+        n = s->n = s->n-1;
         double* t = calloc(n, sizeof(double));
         for (k = 0; k < n; k++){
             for (j = 0; j < n; j++){
                 if (k == s->var[j]){
                     t[j] = t[j] + s->c[k];
-                    goto next_k;
+                    break;
                 }
             }
             for (j=0; j<m;j++){
@@ -172,7 +154,6 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
             for (i=0;i<n;i++){
                 t[i]=t[i] - s->c[k]*s->A[j][i];
             }
-            next_k:;
         }
         for (i = 0; i<n;i++){
             s->c[i]=t[i];
@@ -180,6 +161,8 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
         free(t);
         free(s->x);
         return 1;
+    }
+    return 0;
 }
 
 
@@ -246,8 +229,8 @@ double xsimplex(int m, int n, double** A, double* b, double* c, double* x, doubl
         row = -1;
 
         for (i = 0; i < m; i++) {
-            if (A[i][col] > pow(10,-6)) {
-                if (row < 0 || (b[i] / A[i][col] < b[row] / A[row][col])) {
+            if (s.A[i][col] > pow(10,-6)) {
+                if (row < 0 || (s.b[i] / s.A[i][col] < s.b[row] / s.A[row][col])) {
                     row = i;
                 }
             }
@@ -255,7 +238,7 @@ double xsimplex(int m, int n, double** A, double* b, double* c, double* x, doubl
 
         if (row < 0) {
             free(s.var);
-            return INFINITY; 
+            return 1; 
         }
 
         pivot(&s, row, col);
@@ -268,59 +251,30 @@ double xsimplex(int m, int n, double** A, double* b, double* c, double* x, doubl
                 x[s.var[i]] = 0;
             }
         }
-
         for (i = 0; i < m; i++) {
             if (s.var[n + i] < n) {
                 x[s.var[n + i]] = s.b[i];
             }
         }
-        free(s.var);
     } else {
         for (i = 0; i < n; i++) {
             x[i] = 0;
         }
         for (i = n; i < n + m; i++) {
-            x[i] = b[i - n];
+            x[i] = s.b[i - n];
         }
     }
 
     double result = s.y;
-    
+    free(s.var);
     return result;
 }
 
 
-double simplex(int m, int n, double ** A, double* b, double* c, double* x, double y) {
+int simplex(int m, int n, double ** A, double* b, double* c, double* x, double y) {
     return xsimplex(m,n,A,b,c,x,y, NULL,0);
 }
 
-
-void print_matrix(int m, int n, double* c, double** a, double* b) {
-	int i;
-	int j;
-
-	printf("max Z = ");
-    for(i = 0; i < n; i +=1){
-        if(i > 0){
-            printf("%+10.3lf ",c[i]);
-        } else {
-            printf("%10.3lf", c[i]);
-        }
-    }
-    printf("\n");
-
-    for (i = 0; i < m; i += 1) {
-        printf("\t");
-        for (j = 0; j < n; j += 1) {
-            if (j > 0) {
-                printf("%+10.3lf", a[i][j]);
-            } else {
-                printf("%10.3lf", a[i][j]);
-            }
-        }
-        printf(" \u2264 %8.3lf\n", b[i]);
-    }
-}
 
 
 
@@ -330,20 +284,22 @@ int main(int argc, char** argv) {
     double** a;
     double* b;
     int i, j;
-    int* var; 
+    struct simplex_t s;
+    int* var = NULL; 
+    double y = 0;
+    double* x = NULL; 
 
     scanf("%d %d", &m, &n);
     printf("m = %d, n = %d\n", m, n);
-    double y = 0;
-    double* x = calloc((n+m), sizeof(double)); 
-
-   
 
     c = calloc(n, sizeof(double));
+    for (i = 0; i < n; i++) {
+        printf("%lf", c[i]);
+    }
     
     a = calloc(m, sizeof(double*));
     for (i = 0; i < m; i++) {
-        a[i] = calloc(n + 1, sizeof(double));
+        a[i] = calloc(n, sizeof(double));
     }
     b = calloc(m, sizeof(double));
 
@@ -361,12 +317,9 @@ int main(int argc, char** argv) {
         scanf("%lf", &b[i]);
     }
 
-    print_matrix(m, n, c, a, b);
+    int min_index = simplex(m, n, a, b, c, x, y);
 
-
-    double min_index = simplex(m, n, a, b, c, x, y);
-
-    printf("Index of minimum b[i]: %lf\n", min_index);
+    printf("Index of minimum b[i]: %d\n", min_index);
 
     free(c);
     for (i = 0; i < m; i++) {
@@ -374,7 +327,7 @@ int main(int argc, char** argv) {
     }
     free(a);
     free(b);
-    free(x);
+    free(s.var);
 
     return 0;
 }
