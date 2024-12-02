@@ -1,8 +1,4 @@
-note_t
-initial_node
-extend
-is_integer
-integer
+
 bound
 branch
 succ
