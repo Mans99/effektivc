@@ -399,14 +399,14 @@ struct node_t extend(struct node_t* p,int m, int n, double** a, double* b, doubl
     q.k = k;
     q.ak = ak;
     q.bk = bk;
-    if (ak > 0 && p.max[k] < INFINITY){
-        q.m = p.m;
-    } else if (ak < 0 && p.min[k]>0){
-        q.m = p.m;
+    if (ak > 0 && p->max[k] < INFINITY){
+        q.m = p->m;
+    } else if (ak < 0 && p->min[k]>0){
+        q.m = p->m;
     } else {
-        q.m = p.m + 1;
+        q.m = p->m + 1;
     }
-    q.n = p.n;
+    q.n = p->n;
     q.h = -1;
     q.a = malloc((q.m+1) * sizeof(double*));
     for (i = 0; i < q.m+1; i++){
@@ -419,8 +419,8 @@ struct node_t extend(struct node_t* p,int m, int n, double** a, double* b, doubl
     q.max = malloc((n)*sizeof(double));
 
     for (i = 0; i < n; i++){
-        q.min[i] = p.min[i];
-        q.max[i] = p.max[i];   
+        q.min[i] = p->min[i];
+        q.max[i] = p->max[i];   
     }
 
     for (i = 0; i < m; i++){
