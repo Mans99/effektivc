@@ -22,10 +22,40 @@ double xsimplex(int m, int n, double** A, double* b, double* c, double* x, doubl
 int simplex(int m, int n, double ** A, double* b, double* c, double* x, double y);
 void bound(struct node_t* p,int h, double* zp, double* x);
 int branch(struct node_t* q, double z);
-void succ(struct node_t* p,int h, int m, int n, double** a, double* b,double* c,int k,double ak,double bk, double* zp, double* x);
+void succ(struct node_t* p,struct Node*  h, int m, int n, double** a, double* b,double* c,int k,double ak,double bk, double* zp, double* x);
 int intopt(int m, int n, double** a, double* b, double* c, double* x);
 
 
+
+
+struct Node {
+    struct node_t* p;
+    struct Node* next;
+};
+
+struct Node* create_node(struct node_t* p) {
+    struct Node* n = (struct Node*)malloc(sizeof(struct Node));
+    n->next = NULL;
+    n->p = p;
+    return n;
+}
+
+void push(struct Node** head, struct node_t* p) {
+    struct Node* n = create_node(p);
+    n->next = *head;
+    *head = n;
+}
+
+struct node_t pop(struct Node** head) {
+    if(*head == NULL) {
+        return;
+    }
+    struct Node* n = *head;
+    *head = n->next;
+    struct node_t p = *n->p;
+    free(n);
+    return p;
+} 
 
 
 int init(struct simplex_t* s, int m, int n, double** A, double* b, double* c, double* x, double y , int* var) {
@@ -281,64 +311,6 @@ int simplex(int m, int n, double ** A, double* b, double* c, double* x, double y
 }
 
 
-
-
-int main(int argc, char** argv) {
-    int m, n;
-    double* c;
-    double** a;
-    double* b;
-    int i, j;
-    struct simplex_t s;
-    int* var = NULL; 
-    double y = 0;
-    double* x = NULL; 
-
-    scanf("%d %d", &m, &n);
-    printf("m = %d, n = %d\n", m, n);
-
-    c = calloc(n, sizeof(double));
-    for (i = 0; i < n; i++) {
-        printf("%lf", c[i]);
-    }
-    
-    a = calloc(m, sizeof(double*));
-    for (i = 0; i < m; i++) {
-        a[i] = calloc(n, sizeof(double));
-    }
-    b = calloc(m, sizeof(double));
-
-    for (i = 0; i < n; i++) {
-        scanf("%lf", &c[i]);
-    }
-
-    for (i = 0; i < m; i++) {
-        for (j = 0; j < n; j++) {
-            scanf("%lf", &a[i][j]);
-        }
-    }
-
-    for (i = 0; i < m; i++) {
-        scanf("%lf", &b[i]);
-    }
-
-    int min_index = simplex(m, n, a, b, c, x, y);
-
-    printf("Index of minimum b[i]: %d\n", min_index);
-
-    free(c);
-    for (i = 0; i < m; i++) {
-        free(a[i]);
-    }
-    free(a);
-    free(b);
-    free(s.var);
-
-    return 0;
-}
-
-
-
 struct node_t{
     int m;
     int n;
@@ -393,7 +365,7 @@ struct node_t initial_node(int m, int n, double** a, double* b, double* c){
     return p;
 }
 
-struct node_t extend(struct node_t* p,int m, int n, double** a, double* b, double* c, int k, double ak, double bk){
+struct node_t* extend(struct node_t* p,int m, int n, double** a, double* b, double* c, int k, double ak, double bk){
     struct node_t q;
     int i,j;
     q.k = k;
@@ -451,7 +423,7 @@ struct node_t extend(struct node_t* p,int m, int n, double** a, double* b, doubl
             i++;
         }
     }
-    return q;
+    return &q;
     }
 
     int is_integer(double* xp){
@@ -465,15 +437,16 @@ struct node_t extend(struct node_t* p,int m, int n, double** a, double* b, doubl
         }
     }
 
-    int integer(struct node_t p){
+    int integer(struct node_t* p){
         int i;
-        for (i = 0; i < p.n; i++){
-            if (!is_integer(&p.x[i])){
+        for (i = 0; i < p->n; i++){
+            if (!is_integer(&p->x[i])){
                 return 0;
             }
         }
         return 1;
     }
+
 
 
 
@@ -519,7 +492,8 @@ int branch(struct node_t* q, double z) {
 } 
 
 
-void succ(struct node_t* p,int h, int m, int n, double** a, double* b,double* c,int k,double ak,double bk, double* zp, double* x) {
+
+void succ(struct node_t* p,struct Node* h, int m, int n, double** a, double* b,double* c,int k,double ak,double bk, double* zp, double* x) {
     struct node_t* q = extend(p,m,n,a,b,c,k,ak,bk);
     if(q = NULL) {
         return;
@@ -529,7 +503,7 @@ void succ(struct node_t* p,int h, int m, int n, double** a, double* b,double* c,
         if (integer(q)) {
             bound(q,h,zp,x);
         } else if (branch(q, *zp)) {
-            add(h, q);
+            push(&h, &q);
             return;
         }
     }
@@ -538,24 +512,29 @@ void succ(struct node_t* p,int h, int m, int n, double** a, double* b,double* c,
 
 int intopt(int m, int n, double** a, double* b, double* c, double* x) {
     struct node_t p = initial_node(m, n, a, b, c);
-    set h = {p};
+    struct Node* h = NULL;
+    push(&h, &p);
+    
     double z = -INFINITY;
     p.z = simplex(p.m, p.n, p.a, p.b, p.c, p.x, 0);
-    if (integer(p) || !isfinite(p.z)) {
+    if (integer(&p) || !isfinite(p.z)) {
         z = p.z;
-        if (integer(p)) {
+        if (integer(&p)) {
             x = p.x;
         }
-        free(p);
+        free(&p);
         return z;
     }
-    branch(p,z);
+    branch(&p,z);
     while (h != NULL) {
-        p = h;
-        succ(p, h, m, n, a, b, c, p.h, 1, floor(p.xh), &z, x);
-        succ(p, h, m, n, a, b, c, p.h, -1, -ceil(p.xh), &z, x);
-        free(p);
+        p = pop(&h);
+        if(&p != NULL) {
+            succ(&p, h, m, n, a, b, c, p.h, 1, floor(p.xh), &z, x);
+            succ(&p, h, m, n, a, b, c, p.h, -1, -ceil(p.xh), &z, x);
+            free(&p);
+        }
     }
+  
     if(z = -INFINITY) {
         return NAN;
     } else {
@@ -564,10 +543,59 @@ int intopt(int m, int n, double** a, double* b, double* c, double* x) {
 }
 
 
+int main(int argc, char** argv) {
+    int m, n;
+    double* c;
+    double** a;
+    double* b;
+    int i, j;
+    struct simplex_t s;
+    int* var = NULL; 
+    double y = 0;
+    double* x = NULL; 
 
+    scanf("%d %d", &m, &n);
+    printf("m = %d, n = %d\n", m, n);
 
+    c = calloc(n, sizeof(double));
+    for (i = 0; i < n; i++) {
+        printf("%lf", c[i]);
+    }
+    
+    a = calloc(m, sizeof(double*));
+    for (i = 0; i < m; i++) {
+        a[i] = calloc(n, sizeof(double));
+    }
+    b = calloc(m, sizeof(double));
 
+    for (i = 0; i < n; i++) {
+        scanf("%lf", &c[i]);
+    }
 
+    for (i = 0; i < m; i++) {
+        for (j = 0; j < n; j++) {
+            scanf("%lf", &a[i][j]);
+        }
+    }
+
+    for (i = 0; i < m; i++) {
+        scanf("%lf", &b[i]);
+    }
+
+    int min_index = intopt(m, n, a, b, c, x);
+
+    printf("Index of minimum b[i]: %d\n", min_index);
+
+    free(c);
+    for (i = 0; i < m; i++) {
+        free(a[i]);
+    }
+    free(a);
+    free(b);
+    free(s.var);
+
+    return 0;
+}
 
 //step: 1 rad
 //next: nästa metod
