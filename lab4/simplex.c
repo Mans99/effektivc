@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 
 struct simplex_t {
     int m;
@@ -13,6 +14,28 @@ struct simplex_t {
     double y;
 };
 
+struct node_t{
+    int m;
+    int n;
+    int k;
+    int h;
+    double xh;
+    double ak;
+    double bk;
+    double* min;
+    double* max;
+    double** a;
+    double* b;
+    double* x;
+    double* c;
+    double z;
+};
+
+struct Node {
+    struct node_t* p;
+    struct Node* next;
+};
+
 int init(struct simplex_t* s, int m, int n, double** A, double* b, double* c, double* x, double y , int* var);
 int select_nonbasic(struct simplex_t* s);
 void prepare(struct simplex_t* s,int k);
@@ -20,42 +43,11 @@ int initial(struct simplex_t* s,int m,int n, double** A, double* b, double* c, d
 void pivot (struct simplex_t* s, int row, int col);
 double xsimplex(int m, int n, double** A, double* b, double* c, double* x, double y, int* var, int h);
 int simplex(int m, int n, double ** A, double* b, double* c, double* x, double y);
-void bound(struct node_t* p,int h, double* zp, double* x);
+int intopt(int m, int n, double** a, double* b, double* c, double* x);
+void bound(struct node_t* p,struct Node* h, double* zp, double* x);
 int branch(struct node_t* q, double z);
 void succ(struct node_t* p,struct Node*  h, int m, int n, double** a, double* b,double* c,int k,double ak,double bk, double* zp, double* x);
-int intopt(int m, int n, double** a, double* b, double* c, double* x);
 
-
-
-
-struct Node {
-    struct node_t* p;
-    struct Node* next;
-};
-
-struct Node* create_node(struct node_t* p) {
-    struct Node* n = (struct Node*)malloc(sizeof(struct Node));
-    n->next = NULL;
-    n->p = p;
-    return n;
-}
-
-void push(struct Node** head, struct node_t* p) {
-    struct Node* n = create_node(p);
-    n->next = *head;
-    *head = n;
-}
-
-struct node_t pop(struct Node** head) {
-    if(*head == NULL) {
-        return;
-    }
-    struct Node* n = *head;
-    *head = n->next;
-    struct node_t p = *n->p;
-    free(n);
-    return p;
-} 
 
 
 int init(struct simplex_t* s, int m, int n, double** A, double* b, double* c, double* x, double y , int* var) {
@@ -311,22 +303,29 @@ int simplex(int m, int n, double ** A, double* b, double* c, double* x, double y
 }
 
 
-struct node_t{
-    int m;
-    int n;
-    int k;
-    int h;
-    double xh;
-    double ak;
-    double bk;
-    double* min;
-    double* max;
-    double** a;
-    double* b;
-    double* x;
-    double* c;
-    double z;
-};
+struct Node* create_node(struct node_t* p) {
+    struct Node* n = (struct Node*)malloc(sizeof(struct Node));
+    n->next = NULL;
+    n->p = p;
+    return n;
+}
+
+void push(struct Node** head, struct node_t* p) {
+    struct Node* n = create_node(p);
+    n->next = *head;
+    *head = n;
+}
+
+struct node_t* pop(struct Node** head) {
+    if(*head == NULL) {
+        return NULL;
+    }
+    struct Node* n = *head;
+    *head = n->next;
+    struct node_t* p = n->p;
+    free(n);
+    return p;
+} 
 
 struct node_t initial_node(int m, int n, double** a, double* b, double* c){
     int i, j;
@@ -429,7 +428,7 @@ struct node_t* extend(struct node_t* p,int m, int n, double** a, double* b, doub
     int is_integer(double* xp){
         double x = *xp;
         double r = lround(x);
-        if (abs(r-x) < pow(10,-6)){
+        if (fabs(r-x) < pow(10,-6)){
             *xp = r;
             return 1;
         } else {
@@ -450,7 +449,7 @@ struct node_t* extend(struct node_t* p,int m, int n, double** a, double* b, doub
 
 
 
-void bound(struct node_t* p,int h, double* zp, double* x) {
+void bound(struct node_t* p,struct Node* h, double* zp, double* x) {
     if (p->z > *zp) {
         *zp = p->z;
         memcpy(x, p->x, sizeof(double) * p->n);
@@ -466,7 +465,7 @@ int branch(struct node_t* q, double z) {
     }
     for(int h=0; h < q->n; h = h+1) {
         if (!is_integer(&q->x[h])) {
-            if(q->min[h] = -INFINITY) {
+            if(q->min[h] == -INFINITY) {
                 min = 0;
             } else {
                 min = q->min[h];
@@ -487,15 +486,15 @@ int branch(struct node_t* q, double z) {
             free(q->x);
             return 1;
         }
-    return 0;
     }
+    return 0;
 } 
 
 
 
 void succ(struct node_t* p,struct Node* h, int m, int n, double** a, double* b,double* c,int k,double ak,double bk, double* zp, double* x) {
     struct node_t* q = extend(p,m,n,a,b,c,k,ak,bk);
-    if(q = NULL) {
+    if(q == NULL) {
         return;
     }
     q->z = simplex(q->m, q->n, q->a, q->b, q->c, q->x, 0);
@@ -503,7 +502,7 @@ void succ(struct node_t* p,struct Node* h, int m, int n, double** a, double* b,d
         if (integer(q)) {
             bound(q,h,zp,x);
         } else if (branch(q, *zp)) {
-            push(&h, &q);
+            push(&h, q);
             return;
         }
     }
@@ -513,6 +512,7 @@ void succ(struct node_t* p,struct Node* h, int m, int n, double** a, double* b,d
 int intopt(int m, int n, double** a, double* b, double* c, double* x) {
     struct node_t p = initial_node(m, n, a, b, c);
     struct Node* h = NULL;
+    struct node_t* temp;
     push(&h, &p);
     
     double z = -INFINITY;
@@ -522,20 +522,20 @@ int intopt(int m, int n, double** a, double* b, double* c, double* x) {
         if (integer(&p)) {
             x = p.x;
         }
-        free(&p);
+        free(temp);
         return z;
     }
     branch(&p,z);
     while (h != NULL) {
-        p = pop(&h);
-        if(&p != NULL) {
-            succ(&p, h, m, n, a, b, c, p.h, 1, floor(p.xh), &z, x);
-            succ(&p, h, m, n, a, b, c, p.h, -1, -ceil(p.xh), &z, x);
-            free(&p);
+        temp = pop(&h);
+        if(temp != NULL) {
+            succ(temp, h, m, n, a, b, c, temp->h, 1, floor(temp->xh), &z, x);
+            succ(temp, h, m, n, a, b, c, temp->h, -1, -ceil(temp->xh), &z, x);
+            free(temp);
         }
     }
   
-    if(z = -INFINITY) {
+    if(z == -INFINITY) {
         return NAN;
     } else {
         return z;
