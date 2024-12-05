@@ -44,9 +44,9 @@ void pivot (struct simplex_t* s, int row, int col);
 double xsimplex(int m, int n, double** A, double* b, double* c, double* x, double y, int* var, int h);
 double simplex(int m, int n, double ** A, double* b, double* c, double* x, double y);
 double intopt(int m, int n, double** a, double* b, double* c, double* x);
-void bound(struct node_t* p,struct Node* h, double* zp, double* x);
+void bound(struct node_t* p,struct Node** h, double* zp, double* x);
 int branch(struct node_t* q, double z);
-void succ(struct node_t* p,struct Node*  h, int m, int n, double** a, double* b,double* c,int k,double ak,double bk, double* zp, double* x);
+void succ(struct node_t* p,struct Node**  h, int m, int n, double** a, double* b,double* c,int k,double ak,double bk, double* zp, double* x);
 
 int glob = 0;
 
@@ -317,6 +317,20 @@ double simplex(int m, int n, double ** A, double* b, double* c, double* x, doubl
 }
 
 
+void free_node(struct node_t *node) {
+  free(node->min);
+  free(node->max);
+  free(node->b);
+  free(node->x);
+  free(node->c);
+  for (int i = 0; i < node->m + 1; i++) {
+    free(node->a[i]);
+  }
+  free(node->a);
+  free(node);
+}
+
+
 
 struct Node* create_node(struct node_t* p) {
     struct Node* n = (struct Node*)malloc(sizeof(struct Node));
@@ -332,7 +346,7 @@ void push(struct Node** head, struct node_t* p) {
 }
 
 struct node_t* pop(struct Node** head) {
-    if(*head == NULL) {
+    if (*head == NULL) {
         return NULL;
     }
     struct Node* n = *head;
@@ -348,107 +362,92 @@ void free_stack(struct Node** head) {
     while (current != NULL) {
         struct Node* temp = current;
         current = current->next;
-        free(temp);  // Free the current node
+        free_node(temp->p);  // Free the current node
     }
-    *head = NULL;  // Set the head pointer to NULL
 }
 
-struct node_t initial_node(int m, int n, double** a, double* b, double* c){
+struct node_t* initial_node(int m, int n, double** a, double* b, double* c){
     int i, j;
-    struct node_t p;
-    p.a = calloc(m+1, sizeof(double*));
+    struct node_t* p = (struct node_t*)calloc(1, sizeof(struct node_t));
+    p->a = calloc(m+1, sizeof(double*));
     for (i = 0; i < m+1; i++){
-        p.a[i] = calloc(n+1, sizeof(double));
+        p->a[i] = calloc(n+1, sizeof(double));
     }
-    p.b = calloc(m+1, sizeof(double));
-    p.c = calloc(n+1, sizeof(double));
-    p.x = calloc(n+1, sizeof(double));
-    p.min = calloc(n, sizeof(double));
-    p.max = calloc(n, sizeof(double));
-    p.m = m;
-    p.n = n;
-
-    //copy a, b, and c parameters to p ??
+    p->b = calloc(m+1, sizeof(double));
+    p->c = calloc(n+1, sizeof(double));
+    p->x = calloc(n+1, sizeof(double));
+    p->min = calloc(n, sizeof(double));
+    p->max = calloc(n, sizeof(double));
+    p->m = m;
+    p->n = n;
 
     for (i = 0; i < m; i++){
-        p.b[i] = b[i];
-        for (j = 0; j < n; j++){
-            p.a[i][j] = a[i][j];
- 
-        }
+        memcpy(p->a[i], a[i], n * sizeof(double));
     }
 
-    for (i = 0; i < n; i++) {
-        p.c[i] = c[i];
-    }
+    memcpy(p->b, b, m * sizeof(double));
+    memcpy(p->c, c, n * sizeof(double));
 
 
     for (i = 0; i < n; i++){
-        p.min[i] = -INFINITY;
-        p.max[i] = INFINITY;
+        p->min[i] = -INFINITY;
+        p->max[i] = INFINITY;
     }
     return p;
 }
 
 struct node_t* extend(struct node_t* p,int m, int n, double** a, double* b, double* c, int k, double ak, double bk){
-    struct node_t q;
+    struct node_t* q = (struct node_t*)malloc(sizeof(struct node_t));
     int i,j;
-    q.k = k;
-    q.ak = ak;
-    q.bk = bk;
+    q->k = k;
+    q->ak = ak;
+    q->bk = bk;
     if (ak > 0 && p->max[k] < INFINITY){
-        q.m = p->m;
+        q->m = p->m;
     } else if (ak < 0 && p->min[k]>0){
-        q.m = p->m;
+        q->m = p->m;
     } else {
-        q.m = p->m + 1;
+        q->m = p->m + 1;
     }
-    q.n = p->n;
-    q.h = -1;
-    q.a = malloc((q.m+1) * sizeof(double*));
-    for (i = 0; i < q.m+1; i++){
-        q.a[i] = malloc((q.n+1) *sizeof(double));
+    q->n = p->n;
+    q->h = -1;
+    q->a = malloc((q->m+1) * sizeof(double*));
+    for (i = 0; i < q->m+1; i++){
+        q->a[i] = calloc((q->n+1),sizeof(double));
     }
-    q.b = malloc((q.m+1)*sizeof(double));
-    q.c = malloc((q.n+1)*sizeof(double));
-    q.x = malloc((q.n+1)*sizeof(double));
-    q.min = malloc((n)*sizeof(double));
-    q.max = malloc((n)*sizeof(double));
+    q->b = malloc((q->m+1)*sizeof(double));
+    q->c = malloc((q->n+1)*sizeof(double));
+    q->x = malloc((q->n+1)*sizeof(double));
+    q->min = malloc((n)*sizeof(double));
+    q->max = malloc((n)*sizeof(double));
 
-    for (i = 0; i < n; i++){
-        q.min[i] = p->min[i];
-        q.max[i] = p->max[i];   
+    memcpy(q->min, p->min, n * sizeof(double));
+    memcpy(q->max, p->max, n * sizeof(double));
+    for (i = 0; i < m; i++) {
+        memcpy(q->a[i], a[i], n * sizeof(double));
     }
-
-    for (i = 0; i < m; i++){
-        q.b[i] = b[i];
-        for (j = 0; j < n+1; j++){
-            q.a[i][j] = a[i][j];
-        }
-    }
-    for (i = 0; i < n; i++){
-        q.c[i] = c[i];
-    }
+    memcpy(q->b, b, m * sizeof(double));
+    memcpy(q->c, c, n * sizeof(double));
 
     if (ak > 0){
-        if (q.max[k] == INFINITY || bk < q.max[k]){
-            q.max[k] = bk;
+        if (q->max[k] == INFINITY || bk < q->max[k]){
+            q->max[k] = bk;
         }
-    } else if (q.min[k] == -INFINITY || -bk > q.min[k]){
-            q.min[k] = -bk;
+    } else if (q->min[k] == -INFINITY || -bk > q->min[k]){
+            q->min[k] = -bk;
     }
     for (i = m, j = 0; j < n; j++){
-        if (q.min[j] > -INFINITY){
-            q.a[i][j] = -1;
-            q.b[i] = -q.min[j];
+        if (q->min[j] > -INFINITY){
+            q->a[i][j] = -1;
+            q->b[i] = -q->min[j];
             i++;
-        } if (q.max[j] < INFINITY) {
-            q.a[i][j] = 1;
-            q.b[i] = q.max[j];
+        } if (q->max[j] < INFINITY) {
+            q->a[i][j] = 1;
+            q->b[i] = q->max[j];
             i++;
         }
     }
-    return &q;
+    return q;
     }
 
     int is_integer(double* xp){
@@ -465,7 +464,7 @@ struct node_t* extend(struct node_t* p,int m, int n, double** a, double* b, doub
     int integer(struct node_t* p){
         int i;
         for (i = 0; i < p->n; i++){
-            if (!is_integer(&p->x[i])){
+            if (!is_integer(&(p->x[i]))){
                 return 0;
             }
         }
@@ -475,30 +474,37 @@ struct node_t* extend(struct node_t* p,int m, int n, double** a, double* b, doub
 
 
 
-void bound(struct node_t* p,struct Node* h, double* zp, double* x) {
+void bound(struct node_t* p,struct Node** h, double* zp, double* x) {
     if (p->z > *zp) {
         *zp = p->z;
-        memcpy(x, p->x, sizeof(double) * p->n);
+        memcpy(x, p->x, sizeof(double) * p->n + 1);
         //*zp = p.z
         //copy each element of p.x to x // save best x
         //remove and delete all nodes q in h with q.z < p.z
 
-        struct Node* current = h;
+        struct Node* current = *h;
         struct Node* prev = NULL;
 
         while(current != NULL) {
             if (current -> p -> z < p->z) {
                 if(prev != NULL) {
                     prev->next = current->next;
+                    free_node(current->p);
+                    current->next = NULL;
                     free(current);
                     current = prev->next;
                 } else {
                     prev = current;
                     current = current -> next;
+                    free_node(prev->p);
+                    prev->next = NULL;
                     free(prev);
-                    h = current;
+                    *h = current;
                 }
-            } 
+            } else {
+                prev = current;
+                current = current->next;
+            }
         }
     }
 }
@@ -509,7 +515,7 @@ int branch(struct node_t* q, double z) {
         return 0;
     }
     for(int h=0; h < q->n; h = h+1) {
-        if (!is_integer(&q->x[h])) {
+        if (!is_integer(&(q->x[h]))) {
             if(q->min[h] == -INFINITY) {
                 min = 0;
             } else {
@@ -522,13 +528,14 @@ int branch(struct node_t* q, double z) {
             q->h = h;
             q->xh = q->x[h];
 
-            for (int i = 0; i < q->m; i++) {
-                free(q->a[i]);
-            }
-            free(q->a);
-            free(q->b);
-            free(q->c);
-            free(q->x);
+            // for (int i = 0; i < q->m; i++) {
+            //     free(q->a[i]);
+            // }
+            // free(q->a);
+            // free(q->b);
+            // free(q->c);
+            // free(q->x);
+    
             return 1;
         }
     }
@@ -537,7 +544,7 @@ int branch(struct node_t* q, double z) {
 
 
 
-void succ(struct node_t* p,struct Node* h, int m, int n, double** a, double* b,double* c,int k,double ak,double bk, double* zp, double* x) {
+void succ(struct node_t* p,struct Node** h, int m, int n, double** a, double* b,double* c,int k,double ak,double bk, double* zp, double* x) {
     struct node_t* q = extend(p,m,n,a,b,c,k,ak,bk);
     if(q == NULL) {
         return;
@@ -547,50 +554,43 @@ void succ(struct node_t* p,struct Node* h, int m, int n, double** a, double* b,d
         if (integer(q)) {
             bound(q,h,zp,x);
         } else if (branch(q, *zp)) {
-            push(&h, q);
+            push(h, q);
             return;
         }
     }
-    free(q);
+    free_node(q);
 }
 
 double intopt(int m, int n, double** a, double* b, double* c, double* x) {
-    struct node_t p = initial_node(m, n, a, b, c);
+    struct node_t* p = initial_node(m, n, a, b, c);
     struct Node* h = NULL;
-    struct node_t* temp;
-    push(&h, &p);
+    
+    push(&h, p);
     
     double z = -INFINITY;
-    p.z = simplex(p.m, p.n, p.a, p.b, p.c, p.x, 0);
-    if (integer(&p) || !isfinite(p.z)) {
-        z = p.z;
-        if (integer(&p)) {
-            x = p.x;
+    p->z = simplex(p->m, p->n, p->a, p->b, p->c, p->x, 0);
+    if (integer(p) || !isfinite(p->z)) {
+        z = p->z;
+        if (integer(p)) {
+            memcpy(x, p->x, (p->n) * sizeof(double));
         }
-        free(p.b);
-        free(p.c);
-        free(p.x);
-        free(p.min);
-        free(p.max);
-        for (int i = 0; i < p.m+1; i++) {
-            free(p.a[i]);
-        }
-        free(p.a);
 
-        free_stack(&h);
+        free_node(p);
+        if (h != NULL) {
+            free_stack(&h);
+        }
         
-
-
         return z;
     }
-    branch(&p,z);
+    branch(p,z);
     while (h != NULL) {
-        temp = pop(&h);
-        if(temp != NULL) {
-            succ(&p, h, m, n, a, b, c, p.h, 1, floor(p.xh), &z, x);
-            succ(&p, h, m, n, a, b, c, p.h, -1, -ceil(p.xh), &z, x);
+        p = pop(&h);
+
+        succ(p, &h, m, n, a, b, c, p->h, 1, floor(p->xh), &z, x);
+        succ(p, &h, m, n, a, b, c, p->h, -1, -ceil(p->xh), &z, x);
+
+        free_node(p);
         
-        }
     }
     free_stack(&h);
     if(z == -INFINITY) {
@@ -650,7 +650,7 @@ void print_matrix(int m, int n, double* c, double** a, double* b) {
     }
 }
 
-
+/*
 
 int main(int argc, char** argv) {
     int m, n;
@@ -705,4 +705,4 @@ int main(int argc, char** argv) {
     free(x);
 
     return 0;
-}
+}*/
